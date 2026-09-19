@@ -5,15 +5,12 @@
 [![GitHub release](https://img.shields.io/github/v/release/AboveColin/HA-Jev)](https://github.com/AboveColin/HA-Jev/releases)
 [![License](https://img.shields.io/github/license/AboveColin/HA-Jev)](LICENSE)
 
-# Jev for Home Assistant
+# SystemOne for Home Assistant
 
-Ask [TypeSafe Jev](https://typesafe.ai) questions about your house and get numbers
+Ask SystemOne ML systems like [TypeSafe Jev](https://typesafe.ai) questions about your house and get numbers
 back. Jev is a decision model rather than a chat model, so it answers a typed
 question with a probability, a choice or a score, and this integration turns each
 answer into an entity you can automate on.
-
-Not affiliated with TypeSafe. The API client is
-[jevclient](https://github.com/AboveColin/jevclient).
 
 ![Every question becomes an entity, with the day's spend beside it](docs/images/entities.png)
 
@@ -47,8 +44,7 @@ automation:
 
 ## Installation
 
-Requires Home Assistant 2026.9 or newer and an API key from
-[typesafe.ai](https://typesafe.ai).
+Requires Home Assistant 2026.9 or newer
 
 ### HACS
 
@@ -61,12 +57,12 @@ merges, steps 1 and 2 go away.
 3. Search HACS for **Jev**, then **Download**.
 4. Restart Home Assistant.
 
-[![Open your Home Assistant instance and open a repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AboveColin&repository=HA-Jev&category=integration)
+[![Open your Home Assistant instance and open a repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AtHeartEngineer&repository=HA-SystemOne&category=integration)
 
 ### Manual
 
 Copy `custom_components/jev` from the
-[latest release](https://github.com/AboveColin/HA-Jev/releases/latest) into your
+[latest release](https://github.com/AtHeartEngineer/HA-SystemOne/releases/latest) into your
 `config/custom_components/` directory and restart. HACS will not update a copy
 installed this way.
 
@@ -75,7 +71,7 @@ installed this way.
 Settings, Devices and services, Add integration, then **Jev (TypeSafe)**. The API key
 is the only thing it asks for, and it is checked before the entry is created.
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=jev)
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=systemone)
 
 | Option | Where | Default | Description |
 |---|---|---|---|
