@@ -26,7 +26,8 @@ from homeassistant.exceptions import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.template import Template
-from jevclient import (
+
+from .api import (
     MAX_CHOICE_OPTIONS,
     MAX_SCORE_LEVELS,
     MIN_CHOICE_OPTIONS,

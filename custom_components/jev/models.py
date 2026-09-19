@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.helpers.template import Template
-from jevclient import Choice, Noul, Question, Score
 
+from .api import Choice, Noul, Question, Score
 from .const import (
     CONF_BACKGROUND,
     CONF_CRITERIA,

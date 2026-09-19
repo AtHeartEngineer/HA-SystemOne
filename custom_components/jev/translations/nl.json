@@ -2,30 +2,38 @@
   "config": {
     "step": {
       "user": {
-        "title": "Verbinden met TypeSafe",
-        "description": "Plak een API-sleutel uit je TypeSafe-account. Home Assistant stelt één korte vraag om te controleren of de sleutel werkt.",
+        "title": "Verbinden met een SystemOne-server",
+        "description": "Configureer een server die het TypeSafe Jev /v1/systemone API-formaat ondersteunt.",
         "data": {
-          "api_key": "API-sleutel"
+          "base_url": "Basis-URL",
+          "api_token": "API-token (optioneel)",
+          "model": "Model"
         }
       },
       "reauth_confirm": {
         "title": "Voer je API-sleutel opnieuw in",
         "description": "TypeSafe weigert de opgeslagen sleutel. Plak een werkende sleutel.",
         "data": {
-          "api_key": "API-sleutel"
+          "api_token": "API-token (optioneel)"
         }
       },
       "reconfigure": {
         "title": "Vervang je API-sleutel",
         "description": "Plak een andere TypeSafe API-sleutel. Je vragen en entiteiten blijven staan.",
         "data": {
-          "api_key": "API-sleutel"
+          "base_url": "Basis-URL",
+          "api_token": "API-token (optioneel)",
+          "model": "Model"
         }
       }
     },
     "error": {
       "invalid_auth": "TypeSafe weigert deze sleutel.",
-      "cannot_connect": "Home Assistant kan de TypeSafe-API niet bereiken."
+      "cannot_connect": "Home Assistant kan de SystemOne-server niet bereiken.",
+      "timeout": "De SystemOne-server reageerde niet op tijd.",
+      "ssl_error": "Home Assistant kan het TLS-certificaat niet valideren.",
+      "incompatible_response": "Het antwoord van de modelroute is niet compatibel.",
+      "invalid_url": "Voer een geldige HTTP- of HTTPS-basis-URL zonder inloggegevens in."
     },
     "abort": {
       "already_configured": "Deze API-sleutel is al ingesteld.",

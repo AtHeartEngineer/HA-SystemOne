@@ -1,14 +1,14 @@
 {
   "domain": "jev",
-  "name": "Jev (TypeSafe)",
+  "name": "SystemOne",
   "after_dependencies": ["conversation"],
-  "codeowners": ["@abovecolin"],
+  "codeowners": ["@AtHeartEngineer"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/AboveColin/HA-Jev",
+  "documentation": "https://github.com/AtHeartEngineer/HA-SystemOne",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/AboveColin/HA-Jev/issues",
-  "requirements": ["jevclient==1.1.0"],
-  "version": "1.8.0"
+  "issue_tracker": "https://github.com/AtHeartEngineer/HA-SystemOne/issues",
+  "requirements": [],
+  "version": "1.9.0"
 }

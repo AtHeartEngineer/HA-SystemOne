@@ -1,16 +1,17 @@
-[![Tests](https://github.com/AboveColin/HA-Jev/actions/workflows/tests.yaml/badge.svg)](https://github.com/AboveColin/HA-Jev/actions/workflows/tests.yaml)
-[![hassfest](https://github.com/AboveColin/HA-Jev/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/AboveColin/HA-Jev/actions/workflows/hassfest.yaml)
-[![HACS Action](https://github.com/AboveColin/HA-Jev/actions/workflows/hacs.yaml/badge.svg)](https://github.com/AboveColin/HA-Jev/actions/workflows/hacs.yaml)
+[![Tests](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/tests.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/tests.yaml)
+[![hassfest](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hassfest.yaml)
+[![HACS Action](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hacs.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hacs.yaml)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/v/release/AboveColin/HA-Jev)](https://github.com/AboveColin/HA-Jev/releases)
-[![License](https://img.shields.io/github/license/AboveColin/HA-Jev)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/AtHeartEngineer/HA-SystemOne)](https://github.com/AtHeartEngineer/HA-SystemOne/releases)
+[![License](https://img.shields.io/github/license/AtHeartEngineer/HA-SystemOne)](LICENSE)
 
 # SystemOne for Home Assistant
 
-Ask SystemOne ML systems like [TypeSafe Jev](https://typesafe.ai) questions about your house and get numbers
-back. Jev is a decision model rather than a chat model, so it answers a typed
-question with a probability, a choice or a score, and this integration turns each
-answer into an entity you can automate on.
+Connect Home Assistant to any model host implementing the TypeSafe Jev
+`POST /v1/systemone` API format. The default is hosted
+[TypeSafe Jev](https://typesafe.ai), but a custom endpoint can run any compatible
+model—including an unauthenticated server on a trusted LAN. SystemOne answers typed
+decision questions with a probability, choice, or score rather than generated prose.
 
 ![Every question becomes an entity, with the day's spend beside it](docs/images/entities.png)
 
@@ -20,6 +21,9 @@ answer into an entity you can automate on.
   options with its distribution, or a number that can land between levels.
 - Four actions answer inside an automation and return a response variable:
   `jev.noul`, `jev.choice`, `jev.score` and `jev.ask`.
+- A native `ai_task` entity turns boolean, select/enum, and bounded numeric fields
+  into `noul`, `choice`, and `score` questions. Every field is batched into one
+  SystemOne request.
 - Point a question at entities, devices, areas, floors or labels in the normal
   picker and the state is built for you, so no template is needed.
 - A conversation agent for Assist, so spoken commands are routed by the same model
@@ -53,8 +57,8 @@ Not in the HACS default list yet, so add it as a custom repository once.
 merges, steps 1 and 2 go away.
 
 1. HACS, then the three dot menu, then **Custom repositories**.
-2. Paste `https://github.com/AboveColin/HA-Jev`, set Type to **Integration**, **Add**.
-3. Search HACS for **Jev**, then **Download**.
+2. Paste `https://github.com/AtHeartEngineer/HA-SystemOne`, set Type to **Integration**, **Add**.
+3. Search HACS for **SystemOne**, then **Download**.
 4. Restart Home Assistant.
 
 [![Open your Home Assistant instance and open a repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AtHeartEngineer&repository=HA-SystemOne&category=integration)
@@ -68,21 +72,67 @@ installed this way.
 
 ## Configuration
 
-Settings, Devices and services, Add integration, then **Jev (TypeSafe)**. The API key
-is the only thing it asks for, and it is checked before the entry is created.
+Settings, Devices & services, Add integration, then **SystemOne**.
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=systemone)
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=jev)
 
 | Option | Where | Default | Description |
 |---|---|---|---|
-| API key | config flow | none | Your TypeSafe key |
+| Base URL | config flow | `https://api.typesafe.ai` | Server root; `/v1` and `/v1/systemone` suffixes are normalized |
+| API token | config flow | none | Optional bearer token. No Authorization header is sent when blank |
+| Model | config flow | `jev-latest` | Any model ID accepted by the configured server |
 | Daily input token budget | options | 0 | Stops evaluating for the day once spent. 0 means no limit |
 | Price per million input tokens | options | 0.042 | Only affects the estimated cost sensor |
 | Fall back to this agent | options | none | Where unrouted sentences go. Empty means the agent says it did not understand |
 | Act only above this confidence | options | 0.6 | Below it, the sentence goes to the fallback instead |
 | Allow whole-house commands | options | off | Commands naming no room or device. Turning everything off is always allowed |
 
-Use Reconfigure to replace the key later, which keeps your entities and history.
+For hosted TypeSafe use `https://api.typesafe.ai`, your account token, and
+`jev-latest`. For a self-hosted server, for example, use
+`http://192.168.1.50:8000`, leave the token blank, and enter the model exposed by
+that server. Use Reconfigure to change any of these later without losing entities.
+
+## Native AI Task entity
+
+The integration exposes `ai_task.systemone_ai_task` (the entity ID can be renamed).
+It supports structured data generation only: booleans become `noul`, selects become
+`choice`, and bounded numbers become `score`. Ten requested fields are sent as ten
+questions in one HTTP request with one shared state.
+
+```yaml
+action: ai_task.generate_data
+data:
+  entity_id: ai_task.systemone_ai_task
+  task_name: office_state
+  instructions: >-
+    Presence sensor: on. Computer power: 146 W. Last motion: 12 seconds ago.
+  structure:
+    occupied:
+      description: Is the office currently occupied?
+      required: true
+      selector:
+        boolean:
+    activity:
+      description: What is the most likely activity?
+      required: true
+      selector:
+        select:
+          options: [empty, working, relaxing, uncertain]
+    urgency:
+      description: How urgently should Home Assistant react?
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+response_variable: result
+```
+
+The values are available as `result.data.occupied`, `result.data.activity`, and
+`result.data.urgency`. Free-form text, images, attachments, tool calling, and
+arbitrary conversation generation are not supported by the AI Task entity. The
+existing typed actions and Assist router remain available.
 
 ### Actions
 
@@ -221,6 +271,16 @@ Europe against the published figure, and the two findings that changed this code
 
 ## Known limitations
 
+- The AI Task entity cannot generate arbitrary text, images, attachments, or tool
+  calls. A mixed structure containing any unsupported field is rejected before the
+  API is called.
+- Large or continuous numeric ranges use ten representative score levels and map
+  the weighted score back into the requested range. This is an approximation, not
+  arbitrary numeric generation.
+- Probabilities and confidence are only as calibrated as the configured model host.
+  In particular, self-hosted Qwen-compatible implementations may be uncalibrated.
+- Optional AI Task fields are conservatively answered rather than silently omitted;
+  SystemOne has no native "omit this output" primitive.
 - Answers carry no reasoning, so there is nothing to audit afterwards.
 - Confidence has no published calibration evidence. Treat 0.9 as higher than 0.6
   until you have measured it on your own questions.
@@ -249,8 +309,8 @@ logger:
 | An answer barely moves with the world | The state does not say what you assumed, or it holds a number the model is being asked to compare |
 | Answers sit near 0.5 with low confidence | The question measures more than one thing. Split it |
 | Entities unavailable, budget sensor on | The daily budget stopped evaluation |
-| Entities unavailable, budget sensor off | Look for one line saying TypeSafe is not answering |
-| Setup fails with "TypeSafe did not answer" | Connectivity, not configuration. Home Assistant retries |
+| Entities unavailable, budget sensor off | Look for one line saying the SystemOne server is not answering |
+| A request says the server did not answer | Check the configured base URL, TLS, and network route |
 | Voice commands all go to the fallback | Check the traces in diagnostics. Each one records the reason |
 | Voice acts on the wrong device | The names and areas in the entity registry are what the model reads |
 | An error names a limit | It names your number too. 2 to 255 options, 2 to 10 levels, 250 entities |
@@ -264,10 +324,10 @@ pip install -r requirements-test.txt
 pytest
 ```
 
-153 tests run the integration inside a real Home Assistant with the API client
+177 tests run the integration inside a real Home Assistant with the API client
 replaced, so the suite spends nothing. `quality_scale.yaml` tracks this against Home
 Assistant's quality scale, and `mypy --strict` runs in CI.
 
 ## Changelog
 
-See the [release history](https://github.com/AboveColin/HA-Jev/releases).
+See the [release history](https://github.com/AtHeartEngineer/HA-SystemOne/releases).

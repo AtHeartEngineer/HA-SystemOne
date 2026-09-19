@@ -14,8 +14,8 @@ from homeassistant.core import Context
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
-from jevclient import ChoiceAnswer, NoulAnswer
 
+from custom_components.jev.api import ChoiceAnswer, NoulAnswer
 from custom_components.jev.const import (
     CONF_ALLOW_WHOLE_HOME,
     CONF_FALLBACK_AGENT,
@@ -329,7 +329,7 @@ async def test_a_spent_budget_stops_voice_too(hass, house, mock_client):
 
 
 async def test_an_api_failure_acts_on_nothing(hass, house, mock_client):
-    from jevclient import JevError
+    from custom_components.jev.api import JevError
 
     mock_client.ask.side_effect = JevError("upstream is down")
     calls = []

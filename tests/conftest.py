@@ -3,11 +3,23 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from homeassistant.const import CONF_API_KEY
-from jevclient import ChoiceAnswer, JevResponse, NoulAnswer, ScoreAnswer, Usage
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.jev.const import DOMAIN
+from custom_components.jev.api import (
+    ChoiceAnswer,
+    JevResponse,
+    NoulAnswer,
+    ScoreAnswer,
+    Usage,
+)
+from custom_components.jev.const import (
+    CONF_API_TOKEN,
+    CONF_BASE_URL,
+    CONF_MODEL,
+    DEFAULT_BASE_URL,
+    DEFAULT_MODEL,
+    DOMAIN,
+)
 
 API_KEY = "test-key-not-a-real-one"
 
@@ -37,13 +49,17 @@ def answers() -> dict:
 
 @pytest.fixture
 def mock_client(answers):
-    """Replace JevClient everywhere it is constructed."""
+    """Replace the generic client everywhere it is constructed."""
     client = AsyncMock()
     client.ask = AsyncMock(return_value=build_response(**answers))
-    client.async_close = AsyncMock()
+    client.system_one = client.ask
+    client.async_validate_connection = AsyncMock(return_value=[DEFAULT_MODEL])
+    client.base_url = DEFAULT_BASE_URL
+    client.model = DEFAULT_MODEL
+    client.authenticated = True
     with (
-        patch("custom_components.jev.JevClient", return_value=client),
-        patch("custom_components.jev.config_flow.JevClient", return_value=client),
+        patch("custom_components.jev.SystemOneClient", return_value=client),
+        patch("custom_components.jev.config_flow.SystemOneClient", return_value=client),
     ):
         yield client
 
@@ -52,8 +68,12 @@ def mock_client(answers):
 def config_entry() -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Jev",
-        data={CONF_API_KEY: API_KEY},
+        title="SystemOne (api.typesafe.ai)",
+        data={
+            CONF_BASE_URL: DEFAULT_BASE_URL,
+            CONF_API_TOKEN: API_KEY,
+            CONF_MODEL: DEFAULT_MODEL,
+        },
         options={},
         unique_id="0123456789abcdef",
     )

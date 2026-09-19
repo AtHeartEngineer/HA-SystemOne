@@ -1,12 +1,14 @@
 """Diagnostics get pasted into public issues, so the key must never be in them."""
 
+from unittest.mock import AsyncMock, patch
+
 from homeassistant.components.diagnostics import REDACTED
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.components.diagnostics import (
     get_diagnostics_for_config_entry,
 )
 
-from custom_components.jev.const import DOMAIN
+from custom_components.jev.const import CONF_API_TOKEN, DOMAIN
 
 from .conftest import API_KEY
 from .test_init import CONTEXT
@@ -21,7 +23,7 @@ async def test_the_key_is_redacted(hass, hass_client, mock_client, config_entry)
 
     data = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
 
-    assert data["entry"]["data"]["api_key"] == REDACTED
+    assert data["entry"]["data"][CONF_API_TOKEN] == REDACTED
     assert API_KEY not in str(data)
     assert data["usage_today"]["input_tokens"] == 321
     assert data["contexts"][0]["name"] == "Laundry"
@@ -35,5 +37,10 @@ async def test_system_health_reports_reachability(hass, loaded_entry):
     await hass.async_block_till_done()
     from custom_components.jev.system_health import system_health_info
 
-    info = await system_health_info(hass)
+    with patch(
+        "homeassistant.components.system_health.async_check_can_reach_url",
+        new=AsyncMock(return_value="ok"),
+    ):
+        info = await system_health_info(hass)
     assert "reachable" in info
+    assert info["backend"] == "https://api.typesafe.ai"

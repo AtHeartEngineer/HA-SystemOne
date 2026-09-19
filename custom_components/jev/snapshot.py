@@ -1,7 +1,8 @@
 """What the house looks like to Assist.
 
 Only entities the user exposed to Assist are described here, and nothing else is
-ever sent to TypeSafe. That boundary is the user's, not ours: they already decided
+ever sent to the configured SystemOne server. That boundary is the user's, not ours:
+they already decided
 which entities a voice assistant may see, and a question is not a reason to widen it.
 """
 
@@ -72,7 +73,7 @@ class HomeSnapshot:
         ]
 
     def as_state(self) -> dict[str, object]:
-        """The shape sent to TypeSafe, with field names the model reads as labels."""
+        """The shape sent to SystemOne, with field names the model reads as labels."""
         return {
             "entities": [
                 {

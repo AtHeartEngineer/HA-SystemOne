@@ -19,11 +19,13 @@ def build_device_info(entry_id: str, runtime: JevRuntimeData) -> DeviceInfo:
     return DeviceInfo(
         identifiers={(DOMAIN, entry_id)},
         entry_type=DeviceEntryType.SERVICE,
-        manufacturer="TypeSafe",
+        manufacturer="SystemOne compatible",
+        # Keep the original device name so existing entity IDs and automations do
+        # not change when upgrading from HA-Jev.
         name="Jev",
-        model="System One",
+        model=runtime.client.model,
         sw_version=runtime.model_version,
-        configuration_url="https://docs.typesafe.ai/introduction",
+        configuration_url=runtime.client.base_url,
     )
 
 

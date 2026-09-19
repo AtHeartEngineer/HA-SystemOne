@@ -5,14 +5,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
+
+from .const import CONF_API_TOKEN
 
 if TYPE_CHECKING:
     from . import JevConfigEntry
 
 # async_redact_data matches keys exactly, so every spelling that can appear is listed.
-TO_REDACT = {CONF_API_KEY, "api_key", "apikey", "authorization", "key"}
+TO_REDACT = {
+    CONF_API_TOKEN,
+    "api_key",
+    "apikey",
+    "authorization",
+    "key",
+    "token",
+}
 
 
 async def async_get_config_entry_diagnostics(
@@ -26,6 +34,12 @@ async def async_get_config_entry_diagnostics(
             "options": dict(entry.options),
         },
         "model_version": runtime.model_version,
+        "backend": {
+            "base_url": runtime.client.base_url,
+            "model": runtime.client.model,
+            "authenticated": runtime.client.authenticated,
+        },
+        "last_ai_task": runtime.last_ai_task,
         "usage_today": {
             "day": usage.day.isoformat(),
             "calls": usage.calls,

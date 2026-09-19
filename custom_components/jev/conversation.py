@@ -1,4 +1,4 @@
-"""A conversation agent that routes spoken commands through Jev.
+"""A conversation agent that routes spoken commands through SystemOne.
 
 What this does that a sentence matcher cannot: it understands a command that was
 not phrased the way the template expected. What it does that an LLM agent does not:
@@ -35,8 +35,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent as ha_intent
 from homeassistant.helpers import translation
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from jevclient import JevAuthError, JevError
 
+from .api import JevAuthError, JevError
 from .const import (
     CONF_ALLOW_WHOLE_HOME,
     CONF_FALLBACK_AGENT,
@@ -153,11 +153,13 @@ class JevConversationEntity(conversation.ConversationEntity, AbstractConversatio
         try:
             response = await runtime.client.ask(state, questions)
         except JevAuthError as err:
-            _LOGGER.error("TypeSafe rejected the API key: %s", err)
+            _LOGGER.error("SystemOne server rejected authentication: %s", err)
             return await self._fall_back(user_input, "the API key was rejected")
         except JevError as err:
-            _LOGGER.warning("TypeSafe did not answer: %s", err)
-            return await self._fall_back(user_input, f"TypeSafe did not answer: {err}")
+            _LOGGER.warning("SystemOne server did not answer: %s", err)
+            return await self._fall_back(
+                user_input, f"SystemOne server did not answer: {err}"
+            )
 
         runtime.usage.record(response.usage.input_tokens)
         runtime.model_version = response.model or runtime.model_version
