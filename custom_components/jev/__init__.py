@@ -1,4 +1,4 @@
-"""Ask Jev typed questions about the state of your house.
+"""Ask SystemOne-compatible models typed questions about the state of your house.
 
 One context is one API call. Every question attached to a context is evaluated in
 isolation against the same rendered state, so questions batch almost for free in
@@ -15,34 +15,35 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_SCAN_INTERVAL, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
-from jevclient import (
-    USD_PER_MILLION_INPUT_TOKENS,
-    JevAuthError,
-    JevClient,
-    JevError,
-    Noul,
-)
 
+from .api import (
+    USD_PER_MILLION_INPUT_TOKENS,
+    SystemOneClient,
+)
 from .const import (
+    CONF_API_TOKEN,
     CONF_BACKGROUND,
+    CONF_BASE_URL,
     CONF_CRITERIA,
     CONF_DAILY_TOKEN_BUDGET,
     CONF_ENTITIES,
     CONF_FALSE,
     CONF_INCLUDE_ATTRIBUTES,
     CONF_INSTRUCTIONS,
+    CONF_MODEL,
     CONF_PRICE_PER_MILLION,
     CONF_QUESTIONS,
     CONF_STATE_TEMPLATE,
     CONF_THRESHOLD,
     CONF_TRIGGER_ENTITIES,
     CONF_TRUE,
+    DEFAULT_BASE_URL,
+    DEFAULT_MODEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
     MIN_UPDATE_INTERVAL_SECONDS,
@@ -57,7 +58,12 @@ from .services import async_register_services
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.CONVERSATION, Platform.SENSOR]
+PLATFORMS = [
+    Platform.AI_TASK,
+    Platform.BINARY_SENSOR,
+    Platform.CONVERSATION,
+    Platform.SENSOR,
+]
 
 type JevConfigEntry = ConfigEntry[JevRuntimeData]
 
@@ -217,10 +223,12 @@ def _build_contexts(hass: HomeAssistant) -> list[ContextConfig]:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: JevConfigEntry) -> bool:
-    """Set up one API key, its usage account and a coordinator per context."""
-    client = JevClient(
-        entry.data[CONF_API_KEY],
+    """Set up one System One server and its configured contexts."""
+    client = SystemOneClient(
         session=async_get_clientsession(hass),
+        base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
+        token=entry.data.get(CONF_API_TOKEN, entry.data.get(CONF_API_KEY)),
+        model=entry.data.get(CONF_MODEL, DEFAULT_MODEL),
     )
     store: Store[dict[str, Any]] = Store(
         hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.usage"
@@ -236,17 +244,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: JevConfigEntry) -> bool:
     usage.restore(await store.async_load())
     runtime = JevRuntimeData(client=client, usage=usage)
     entry.runtime_data = runtime
-
-    # Prove the service answers before entities appear. One noul against a two word
-    # state costs about 40 input tokens, well under a thousandth of a cent, and it
-    # is the difference between a clear "cannot reach TypeSafe" and a house full of
-    # entities that never populate.
-    try:
-        await client.ask("ok", {"probe": Noul("Is this text in English?")})
-    except JevAuthError as err:
-        raise ConfigEntryAuthFailed(str(err)) from err
-    except JevError as err:
-        raise ConfigEntryNotReady(f"TypeSafe did not answer: {err}") from err
 
     for context in _build_contexts(hass):
         coordinator = JevCoordinator(hass, entry, runtime, context)
@@ -276,3 +273,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: JevConfigEntry) -> bool
             coordinator.async_shutdown_triggers()
         await entry.runtime_data.usage.async_flush()
     return unloaded
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: JevConfigEntry) -> bool:
+    """Migrate TypeSafe-only entries to the generic server settings."""
+    if entry.version >= 2:
+        return True
+    data = dict(entry.data)
+    token = data.pop(CONF_API_KEY, data.get(CONF_API_TOKEN, ""))
+    data.setdefault(CONF_BASE_URL, DEFAULT_BASE_URL)
+    data.setdefault(CONF_API_TOKEN, token)
+    data.setdefault(CONF_MODEL, DEFAULT_MODEL)
+    hass.config_entries.async_update_entry(
+        entry,
+        data=data,
+        unique_id=DEFAULT_BASE_URL,
+        version=2,
+    )
+    return True

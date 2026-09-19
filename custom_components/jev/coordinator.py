@@ -24,15 +24,15 @@ from homeassistant.helpers.target import (
     async_track_target_selector_state_change_event,
 )
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from jevclient import (
+
+from .api import (
     USD_PER_MILLION_INPUT_TOKENS,
     Answer,
     JevAuthError,
-    JevClient,
     JevError,
     JevRateLimitError,
+    SystemOneClient,
 )
-
 from .const import (
     CONVERSATION_TRACE_LENGTH,
     DOMAIN,
@@ -137,10 +137,11 @@ class UsageAccount:
 class JevRuntimeData:
     """Everything a config entry owns while it is loaded."""
 
-    client: JevClient
+    client: SystemOneClient
     usage: UsageAccount
     coordinators: dict[str, JevCoordinator] = field(default_factory=dict)
     model_version: str | None = None
+    last_ai_task: dict[str, Any] | None = None
     # What the conversation agent decided, most recent first. Bounded, because a
     # satellite that mishears a wake word all night must not grow this without end.
     conversation_traces: deque[dict[str, Any]] = field(
@@ -264,13 +265,15 @@ class JevCoordinator(DataUpdateCoordinator[dict[str, Answer]]):
         except JevAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except JevRateLimitError as err:
-            raise UpdateFailed(f"rate limited by TypeSafe: {err}") from err
+            raise UpdateFailed(f"rate limited by SystemOne server: {err}") from err
         except JevError as err:
             self._log_unavailable_once(err)
             raise UpdateFailed(str(err)) from err
 
         if self._logged_unavailable:
-            _LOGGER.info("TypeSafe is answering again, context %r resumed", context.name)
+            _LOGGER.info(
+                "SystemOne server is answering again, context %r resumed", context.name
+            )
             self._logged_unavailable = False
         usage.record(response.usage.input_tokens)
         self.runtime.model_version = response.model or self.runtime.model_version
@@ -284,7 +287,7 @@ class JevCoordinator(DataUpdateCoordinator[dict[str, Answer]]):
             return
         self._logged_unavailable = True
         _LOGGER.error(
-            "TypeSafe is not answering, so context %r cannot be evaluated: %s",
+            "SystemOne server is not answering, so context %r cannot be evaluated: %s",
             self.context_config.name,
             err,
         )

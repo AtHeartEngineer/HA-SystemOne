@@ -12,8 +12,8 @@ from homeassistant.components.sensor import (
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from jevclient import ChoiceAnswer, NoulAnswer, ScoreAnswer
 
+from .api import ChoiceAnswer, NoulAnswer, ScoreAnswer
 from .const import (
     ATTR_CONFIDENCE,
     ATTR_LEGEND,

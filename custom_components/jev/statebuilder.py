@@ -1,4 +1,4 @@
-"""Turn picked entities, devices and areas into the state Jev reads.
+"""Turn picked entities, devices and areas into the state SystemOne reads.
 
 The docs are explicit that a JSON object beats a flattened sentence, because the
 model reads the field names as labels. So an entity becomes a small record with its

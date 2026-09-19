@@ -7,12 +7,12 @@ import pytest
 from homeassistant.const import CONF_API_KEY
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from jevclient import NoulAnswer
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
+from custom_components.jev.api import NoulAnswer
 from custom_components.jev.const import CONF_DAILY_TOKEN_BUDGET, DOMAIN
 
 from .conftest import build_response
@@ -180,40 +180,42 @@ async def test_a_yaml_question_takes_background_too(hass, mock_client, config_en
     )
 
 
-async def test_an_unreachable_service_is_not_ready_rather_than_broken(
+async def test_setup_does_not_spend_inference_to_probe_an_unreachable_service(
     hass, mock_client, config_entry
 ):
-    """Setup must fail loudly, not leave a house full of entities that never fill."""
+    """A missing optional discovery route is handled without a paid probe."""
     from homeassistant.config_entries import ConfigEntryState
-    from jevclient import JevConnectionError
+
+    from custom_components.jev.api import JevConnectionError
 
     mock_client.ask.side_effect = JevConnectionError("no route to host")
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
-    assert config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert config_entry.state is ConfigEntryState.LOADED
+    mock_client.ask.assert_not_awaited()
 
 
-async def test_a_rejected_key_asks_for_a_new_one(hass, mock_client, config_entry):
+async def test_setup_does_not_spend_inference_to_probe_a_token(
+    hass, mock_client, config_entry
+):
     from homeassistant.config_entries import ConfigEntryState
-    from jevclient import JevAuthError
+
+    from custom_components.jev.api import JevAuthError
 
     mock_client.ask.side_effect = JevAuthError("key revoked")
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
-    assert config_entry.state is ConfigEntryState.SETUP_ERROR
-    assert any(
-        flow["context"]["source"] == "reauth"
-        for flow in hass.config_entries.flow.async_progress()
-    )
+    assert config_entry.state is ConfigEntryState.LOADED
+    mock_client.ask.assert_not_awaited()
 
 
 async def test_an_outage_is_logged_once_and_recovery_once(
     hass, mock_client, config_entry, caplog
 ):
     """A 30 s context would otherwise write thousands of identical lines a day."""
-    from jevclient import JevConnectionError
+    from custom_components.jev.api import JevConnectionError
 
     await setup_with_context(hass, config_entry)
     coordinator = next(iter(config_entry.runtime_data.coordinators.values()))
@@ -254,7 +256,7 @@ THREE_TYPES = {
 async def test_each_question_type_becomes_the_right_kind_of_sensor(
     hass, mock_client, config_entry
 ):
-    from jevclient import ChoiceAnswer, ScoreAnswer
+    from custom_components.jev.api import ChoiceAnswer, ScoreAnswer
 
     mock_client.ask.return_value = build_response(
         everything_forgotten=NoulAnswer(noul=0.42),

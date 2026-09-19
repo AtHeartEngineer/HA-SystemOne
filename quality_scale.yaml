@@ -29,8 +29,9 @@ rules:
   dependency-transparency:
     status: done
     comment: >-
-      jevclient is MIT, source public at github.com/AboveColin/jevclient, built in
-      CI from that source and published to PyPI over trusted publishing.
+      The integration uses Home Assistant's shared aiohttp session and has no
+      external API-client dependency. Transport and response validation are built
+      into the custom component.
   docs-actions: done
   docs-conditions:
     status: exempt
@@ -152,7 +153,7 @@ rules:
   # Platinum
   async-dependency:
     status: done
-    comment: jevclient is aiohttp-based and fully async.
+    comment: The built-in SystemOne client uses Home Assistant's shared aiohttp session.
   inject-websession:
     status: done
     comment: >-

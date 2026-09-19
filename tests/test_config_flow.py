@@ -1,121 +1,133 @@
-"""The config flow, which is the one thing every user touches."""
+"""Configuration flows for hosted and self-hosted System One servers."""
 
-from unittest.mock import patch
-
-import pytest
 from homeassistant import config_entries
-from homeassistant.const import CONF_API_KEY
 from homeassistant.data_entry_flow import FlowResultType
-from jevclient import JevAuthError, JevConnectionError
 
+from custom_components.jev.api import JevAuthError, JevConnectionError
 from custom_components.jev.const import (
+    CONF_API_TOKEN,
+    CONF_BASE_URL,
     CONF_DAILY_TOKEN_BUDGET,
+    CONF_MODEL,
     CONF_PRICE_PER_MILLION,
+    DEFAULT_BASE_URL,
+    DEFAULT_MODEL,
     DOMAIN,
 )
 
 from .conftest import API_KEY
 
 
-async def test_user_flow_creates_entry(hass, mock_client):
-    result = await hass.config_entries.flow.async_init(
+async def _start_user_flow(hass):
+    return await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
+
+
+async def test_typesafe_with_token_creates_entry(hass, mock_client):
+    result = await _start_user_flow(hass)
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: API_KEY}
+        result["flow_id"],
+        {
+            CONF_BASE_URL: "https://api.typesafe.ai/v1/systemone",
+            CONF_API_TOKEN: API_KEY,
+            CONF_MODEL: "jev-latest",
+        },
     )
+
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Jev"
-    assert result["data"] == {CONF_API_KEY: API_KEY}
-    # Two short questions: the flow proves the key works before creating the entry,
-    # then setup proves the service answers before any entity appears. Each is about
-    # 40 input tokens.
-    assert mock_client.ask.await_count == 2
+    assert result["title"] == "SystemOne (api.typesafe.ai)"
+    assert result["data"] == {
+        CONF_BASE_URL: DEFAULT_BASE_URL,
+        CONF_API_TOKEN: API_KEY,
+        CONF_MODEL: DEFAULT_MODEL,
+    }
+    mock_client.async_validate_connection.assert_awaited_once_with()
+    mock_client.ask.assert_not_awaited()
 
 
-@pytest.mark.parametrize(
-    ("error", "expected"),
-    [(JevAuthError("no"), "invalid_auth"), (JevConnectionError("no"), "cannot_connect")],
-)
-async def test_user_flow_errors_recover(hass, mock_client, error, expected):
-    """A rejected key shows the reason and leaves the form usable."""
-    mock_client.ask.side_effect = error
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+async def test_self_hosted_without_token_creates_entry(hass, mock_client):
+    result = await _start_user_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: "wrong"}
+        result["flow_id"],
+        {
+            CONF_BASE_URL: "http://192.168.1.50:8000/v1/",
+            CONF_API_TOKEN: "",
+            CONF_MODEL: "qwen3.8-flash-next",
+        },
     )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {
+        CONF_BASE_URL: "http://192.168.1.50:8000",
+        CONF_API_TOKEN: "",
+        CONF_MODEL: "qwen3.8-flash-next",
+    }
+
+
+async def test_invalid_url_stays_on_form_without_calling_server(hass, mock_client):
+    result = await _start_user_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_BASE_URL: "server:8000",
+            CONF_API_TOKEN: "",
+            CONF_MODEL: DEFAULT_MODEL,
+        },
+    )
+
     assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": expected}
+    assert result["errors"] == {CONF_BASE_URL: "invalid_url"}
+    mock_client.async_validate_connection.assert_not_awaited()
 
-    mock_client.ask.side_effect = None
+
+async def test_connection_and_auth_errors_are_distinct(hass, mock_client):
+    result = await _start_user_flow(hass)
+    mock_client.async_validate_connection.side_effect = JevAuthError("no")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: API_KEY}
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-
-
-async def test_same_key_twice_is_refused(hass, mock_client, config_entry):
-    config_entry.add_to_hass(hass)
-    with patch("custom_components.jev.config_flow.hashlib.sha256") as sha:
-        sha.return_value.hexdigest.return_value = config_entry.unique_id + "padding"
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_API_KEY: API_KEY}
-        )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
-
-
-async def test_the_key_itself_is_never_the_unique_id(hass, mock_client):
-    """A unique id lands in the registry, so it must not be the credential."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: API_KEY}
-    )
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    assert entry.unique_id != API_KEY
-    assert API_KEY not in entry.unique_id
-    assert len(entry.unique_id) == 16
-
-
-async def test_reauth_replaces_the_key(hass, mock_client, config_entry):
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
-    assert result["step_id"] == "reauth_confirm"
-
-    mock_client.ask.side_effect = JevAuthError("still no")
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: "still-wrong"}
+        result["flow_id"],
+        {
+            CONF_BASE_URL: DEFAULT_BASE_URL,
+            CONF_API_TOKEN: "wrong",
+            CONF_MODEL: DEFAULT_MODEL,
+        },
     )
     assert result["errors"] == {"base": "invalid_auth"}
 
-    mock_client.ask.side_effect = None
+    mock_client.async_validate_connection.side_effect = JevConnectionError("offline")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: "a-working-key"}
+        result["flow_id"],
+        {
+            CONF_BASE_URL: DEFAULT_BASE_URL,
+            CONF_API_TOKEN: API_KEY,
+            CONF_MODEL: DEFAULT_MODEL,
+        },
+    )
+    assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_reconfigure_updates_server_settings(hass, mock_client, loaded_entry):
+    result = await loaded_entry.start_reconfigure_flow(hass)
+    assert result["step_id"] == "reconfigure"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_BASE_URL: "http://r9v-server:8000/v1",
+            CONF_API_TOKEN: "",
+            CONF_MODEL: "Qwen/Qwen3.8-Flash-Next",
+        },
     )
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "reauth_successful"
-    assert config_entry.data[CONF_API_KEY] == "a-working-key"
-    # A successful reauth reloads the entry, which creates the entities and writes
-    # the registries. Without waiting, that lands during teardown, and if it lands
-    # after shutdown has consumed the stores' one-shot final-write listeners their
-    # timers survive and the harness fails the test on a lingering timer. It failed
-    # that way on CI only, naming core.entity_registry rather than anything here.
-    await hass.async_block_till_done()
+    assert result["reason"] == "reconfigure_successful"
+    assert loaded_entry.data[CONF_BASE_URL] == "http://r9v-server:8000"
+    assert loaded_entry.data[CONF_API_TOKEN] == ""
+    assert loaded_entry.data[CONF_MODEL] == "Qwen/Qwen3.8-Flash-Next"
 
 
-async def test_options_flow_stores_the_budget(hass, loaded_entry):
+async def test_options_flow_keeps_existing_budget_behavior(hass, loaded_entry):
     result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
-    assert result["step_id"] == "init"
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {CONF_DAILY_TOKEN_BUDGET: 50_000, CONF_PRICE_PER_MILLION: 0.042},
@@ -123,25 +135,3 @@ async def test_options_flow_stores_the_budget(hass, loaded_entry):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     assert loaded_entry.options[CONF_DAILY_TOKEN_BUDGET] == 50_000
-
-
-async def test_reconfigure_swaps_the_key_and_keeps_the_entities(
-    hass, mock_client, loaded_entry
-):
-    """Changing a key must not mean removing the integration and losing its history."""
-    result = await loaded_entry.start_reconfigure_flow(hass)
-    assert result["step_id"] == "reconfigure"
-
-    mock_client.ask.side_effect = JevAuthError("that one is wrong too")
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: "still-wrong"}
-    )
-    assert result["errors"] == {"base": "invalid_auth"}
-
-    mock_client.ask.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_API_KEY: "a-fresh-key"}
-    )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "reconfigure_successful"
-    assert loaded_entry.data[CONF_API_KEY] == "a-fresh-key"

@@ -1,8 +1,14 @@
-"""Constants for the Jev integration."""
+"""Constants for the SystemOne integration (legacy domain: jev)."""
 
 from typing import Final
 
 DOMAIN: Final = "jev"
+
+CONF_BASE_URL: Final = "base_url"
+CONF_API_TOKEN: Final = "api_token"
+CONF_MODEL: Final = "model"
+DEFAULT_BASE_URL: Final = "https://api.typesafe.ai"
+DEFAULT_MODEL: Final = "jev-latest"
 
 CONF_QUESTIONS: Final = "questions"
 CONF_STATE_TEMPLATE: Final = "state"
@@ -77,9 +83,9 @@ CONF_MIN_CONFIDENCE: Final = "min_confidence"
 CONF_ALLOW_WHOLE_HOME: Final = "allow_whole_home"
 
 # Below this, the router hands the sentence to the fallback agent rather than
-# guessing. 0.6 is a starting point and not a calibrated figure: TypeSafe publishes
-# no calibration evidence for confidence, so treat it as an ordering and measure it
-# on your own phrasing before moving it.
+# guessing. 0.6 is a starting point and not a calibrated figure: compatible model
+# hosts may expose differently calibrated confidence, so measure it on your own
+# phrasing before moving it.
 DEFAULT_MIN_CONFIDENCE: Final = 0.6
 
 # How many exposed entities one spoken command may describe.

@@ -2,34 +2,42 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to TypeSafe",
-        "description": "Paste an API key from your TypeSafe account. Home Assistant asks one short question to check that the key works.",
+        "title": "Connect to a SystemOne server",
+        "description": "Configure any server implementing the TypeSafe Jev /v1/systemone API format. Model discovery is attempted when available, without running paid inference.",
         "data": {
-          "api_key": "API key"
+          "base_url": "Base URL",
+          "api_token": "API token (optional)",
+          "model": "Model"
         }
       },
       "reauth_confirm": {
-        "title": "Re-enter your API key",
-        "description": "TypeSafe rejected the key currently stored. Paste a working one.",
+        "title": "Update authentication",
+        "description": "The SystemOne server rejected the stored token. Enter a working token, or leave it blank for an unauthenticated server.",
         "data": {
-          "api_key": "API key"
+          "api_token": "API token (optional)"
         }
       },
       "reconfigure": {
-        "title": "Replace your API key",
-        "description": "Paste a different TypeSafe API key. Your questions and entities are kept.",
+        "title": "Reconfigure SystemOne server",
+        "description": "Change the endpoint, optional token, or model. Your questions and entities are kept.",
         "data": {
-          "api_key": "API key"
+          "base_url": "Base URL",
+          "api_token": "API token (optional)",
+          "model": "Model"
         }
       }
     },
     "error": {
-      "invalid_auth": "TypeSafe rejected this key.",
-      "cannot_connect": "Home Assistant could not reach the TypeSafe API."
+      "invalid_auth": "The SystemOne server rejected these credentials.",
+      "cannot_connect": "Home Assistant could not reach the SystemOne server.",
+      "timeout": "The SystemOne server did not respond in time.",
+      "ssl_error": "Home Assistant could not validate the server's TLS certificate.",
+      "incompatible_response": "The server's model-discovery response is not compatible.",
+      "invalid_url": "Enter a valid HTTP or HTTPS base URL without credentials."
     },
     "abort": {
-      "already_configured": "This API key is already set up.",
-      "reauth_successful": "The new key works.",
+      "already_configured": "This SystemOne server is already set up.",
+      "reauth_successful": "Authentication was updated.",
       "reconfigure_successful": "Reconfigured successfully."
     }
   },
@@ -50,7 +58,7 @@
   },
   "issues": {
     "daily_budget_exceeded": {
-      "title": "Jev stopped evaluating: daily budget reached",
+      "title": "SystemOne stopped evaluating: daily budget reached",
       "description": "The daily budget is {budget} input tokens and {used} have been used today, so no further questions are being asked. Answers keep their last value until tomorrow. Raise the budget in the integration options, evaluate contexts less often, or shorten your questions."
     }
   },
@@ -206,7 +214,7 @@
       "message": "Nothing to judge: give this action some text, or pick the entities, devices or areas it should look at."
     },
     "no_entry": {
-      "message": "No loaded Jev config entry to ask with. Add the integration first, or pick one under API key when more than one is set up."
+      "message": "No loaded SystemOne config entry is available. Add the integration first, or select an API server when more than one is configured."
     },
     "missing_targets": {
       "message": "These targets do not exist: {targets}. Asking about the rest would answer a different question from the one you wrote."
@@ -227,10 +235,10 @@
       "message": "The state template failed: {reason}"
     },
     "auth_rejected": {
-      "message": "TypeSafe rejected the API key: {reason}"
+      "message": "The SystemOne server rejected authentication: {reason}"
     },
     "ask_failed": {
-      "message": "Asking Jev failed: {reason}"
+      "message": "The SystemOne request failed: {reason}"
     },
     "wrong_answer_type": {
       "message": "Asked a {question_type} question and got a {got} back, which the API should not do."
@@ -242,7 +250,7 @@
       "message": "A score takes {min} to {max} levels, lowest first, and this one has {count}."
     },
     "unreadable_answer": {
-      "message": "TypeSafe returned an answer of type {kind}, which this version cannot read. Update the integration."
+      "message": "The SystemOne server returned an answer of type {kind}, which this version cannot read. Update the integration."
     }
   },
   "common": {

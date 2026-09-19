@@ -4,10 +4,6 @@ pytest==9.0.3
 pytest-asyncio==1.4.0
 pyyaml
 
-# The same version manifest.json pins, which is what Home Assistant installs for a
-# user. tests/test_manifest.py fails if these two ever disagree.
-jevclient==1.1.0
-
 # The conversation component's own requirements. Home Assistant installs these for a
 # user the moment a conversation agent exists; a test environment gets nothing
 # unless it is asked, and the failure is an ImportError at collection rather than a
@@ -17,3 +13,7 @@ jevclient==1.1.0
 gazetteer-matcher==1.1.0
 hassil==3.12.0
 home-assistant-intents==2026.8.28
+
+# The AI Task component imports Home Assistant's camera module, whose runtime
+# requirement is installed automatically in Home Assistant but not by the test wheel.
+PyTurboJPEG==1.8.3

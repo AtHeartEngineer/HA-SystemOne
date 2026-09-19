@@ -11,8 +11,8 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from jevclient import NoulAnswer
 
+from .api import NoulAnswer
 from .const import CONF_THRESHOLD
 from .coordinator import JevCoordinator, JevRuntimeData
 from .entity import JevQuestionEntity, JevUsageEntity

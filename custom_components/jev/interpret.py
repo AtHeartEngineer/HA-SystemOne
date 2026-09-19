@@ -18,8 +18,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.helpers import intent as ha_intent
-from jevclient import Choice, ChoiceAnswer, JevResponse, Noul, NoulAnswer, Question
 
+from .api import Choice, ChoiceAnswer, JevResponse, Noul, NoulAnswer, Question
 from .snapshot import HomeSnapshot
 
 NONE = "none_of_these"
