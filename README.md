@@ -1,125 +1,151 @@
 [![Tests](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/tests.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/tests.yaml)
 [![hassfest](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hassfest.yaml)
-[![HACS Action](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hacs.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hacs.yaml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/v/release/AtHeartEngineer/HA-SystemOne)](https://github.com/AtHeartEngineer/HA-SystemOne/releases)
-[![License](https://img.shields.io/github/license/AtHeartEngineer/HA-SystemOne)](LICENSE)
+[![HACS](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hacs.yaml/badge.svg)](https://github.com/AtHeartEngineer/HA-SystemOne/actions/workflows/hacs.yaml)
+[![Release](https://img.shields.io/github/v/release/AtHeartEngineer/HA-SystemOne)](https://github.com/AtHeartEngineer/HA-SystemOne/releases)
 
 # SystemOne for Home Assistant
 
-Connect Home Assistant to any model host implementing the TypeSafe Jev
-`POST /v1/systemone` API format. The default is hosted
-[TypeSafe Jev](https://typesafe.ai), but a custom endpoint can run any compatible
-model—including an unauthenticated server on a trusted LAN. SystemOne answers typed
-decision questions with a probability, choice, or score rather than generated prose.
+SystemOne is a Home Assistant integration for decision-model APIs that implement
+the TypeSafe Jev `POST /v1/systemone` format.
 
-![Every question becomes an entity, with the day's spend beside it](docs/images/entities.png)
+It works with:
 
-## What it does
+- hosted [TypeSafe Jev](https://typesafe.ai);
+- self-hosted SystemOne-compatible servers;
+- custom model hosts, including R9V/Qwen proxies;
+- authenticated and unauthenticated endpoints.
 
-- Questions in `configuration.yaml` become sensors: a probability, one of your
-  options with its distribution, or a number that can land between levels.
-- Four actions answer inside an automation and return a response variable:
-  `jev.noul`, `jev.choice`, `jev.score` and `jev.ask`.
-- A native `ai_task` entity turns boolean, select/enum, and bounded numeric fields
-  into `noul`, `choice`, and `score` questions. Every field is batched into one
-  SystemOne request.
-- Point a question at entities, devices, areas, floors or labels in the normal
-  picker and the state is built for you, so no template is needed.
-- A conversation agent for Assist, so spoken commands are routed by the same model
-  and counted against the same budget.
-- Reports what it spends: calls, input tokens and estimated cost per day, plus a
-  daily token budget that halts evaluation when it trips.
-- Fifteen worked [examples](examples/), four of them pairing Jev with an LLM.
+The integration sends a shared state plus one or more typed questions and receives
+probabilities, choices, or scores. It does not load a model inside Home Assistant.
 
-```yaml
-automation:
-  - alias: Remind about the washing
-    triggers:
-      - trigger: state
-        entity_id: binary_sensor.jev_laundry_forgotten
-        to: "on"
-        for: "00:10:00"
-    actions:
-      - action: notify.mobile_app
-        data:
-          message: The washing is done and still in the machine.
-```
+## Features
+
+- Native Home Assistant `AI Task` entity for structured decisions.
+- Boolean fields mapped to SystemOne `noul` questions.
+- Select/enum fields mapped to `choice` questions.
+- Bounded numeric fields mapped to ordinal `score` questions.
+- Multiple AI Task fields evaluated in one `/v1/systemone` request.
+- Configurable API base URL, optional bearer token, and model ID.
+- Existing `jev.noul`, `jev.choice`, `jev.score`, and `jev.ask` actions.
+- YAML-defined decision sensors and binary sensors.
+- Optional Assist conversation router.
+- Usage, latency, estimated-cost, and daily-budget entities.
+
+## Compatibility note
+
+This project was originally HA-Jev. The Home Assistant domain remains `jev` so
+existing entity IDs, service calls, YAML configuration, and automations continue to
+work. The integration name and provider behavior are now generic SystemOne.
 
 ## Installation
 
-Requires Home Assistant 2026.9 or newer
+Home Assistant 2026.9 or newer is required.
 
 ### HACS
 
-Not in the HACS default list yet, so add it as a custom repository once.
-[hacs/default#11052](https://github.com/hacs/default/pull/11052) is queued; when it
-merges, steps 1 and 2 go away.
+Add this fork as a custom repository:
 
-1. HACS, then the three dot menu, then **Custom repositories**.
-2. Paste `https://github.com/AtHeartEngineer/HA-SystemOne`, set Type to **Integration**, **Add**.
-3. Search HACS for **SystemOne**, then **Download**.
-4. Restart Home Assistant.
+1. Open HACS.
+2. Open the three-dot menu and choose **Custom repositories**.
+3. Enter `https://github.com/AtHeartEngineer/HA-SystemOne`.
+4. Select **Integration** and choose **Add**.
+5. Search for **SystemOne**, install it, and restart Home Assistant.
 
-[![Open your Home Assistant instance and open a repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AtHeartEngineer&repository=HA-SystemOne&category=integration)
+[![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AtHeartEngineer&repository=HA-SystemOne&category=integration)
 
 ### Manual
 
-Copy `custom_components/jev` from the
-[latest release](https://github.com/AtHeartEngineer/HA-SystemOne/releases/latest) into your
-`config/custom_components/` directory and restart. HACS will not update a copy
-installed this way.
+Download the [latest release](https://github.com/AtHeartEngineer/HA-SystemOne/releases/latest),
+copy `custom_components/jev` into `config/custom_components/`, and restart Home
+Assistant.
 
 ## Configuration
 
-Settings, Devices & services, Add integration, then **SystemOne**.
+Go to **Settings → Devices & services → Add integration → SystemOne**.
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=jev)
+[![Add SystemOne to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=jev)
 
-| Option | Where | Default | Description |
-|---|---|---|---|
-| Base URL | config flow | `https://api.typesafe.ai` | Server root; `/v1` and `/v1/systemone` suffixes are normalized |
-| API token | config flow | none | Optional bearer token. No Authorization header is sent when blank |
-| Model | config flow | `jev-latest` | Any model ID accepted by the configured server |
-| Daily input token budget | options | 0 | Stops evaluating for the day once spent. 0 means no limit |
-| Price per million input tokens | options | 0.042 | Only affects the estimated cost sensor |
-| Fall back to this agent | options | none | Where unrouted sentences go. Empty means the agent says it did not understand |
-| Act only above this confidence | options | 0.6 | Below it, the sentence goes to the fallback instead |
-| Allow whole-house commands | options | off | Commands naming no room or device. Turning everything off is always allowed |
+| Setting | Default | Description |
+|---|---|---|
+| Base URL | `https://api.typesafe.ai` | Root URL for the compatible API |
+| API token | blank | Optional bearer token |
+| Model | `jev-latest` | Model identifier sent to the server |
 
-For hosted TypeSafe use `https://api.typesafe.ai`, your account token, and
-`jev-latest`. For a self-hosted server, for example, use
-`http://192.168.1.50:8000`, leave the token blank, and enter the model exposed by
-that server. Use Reconfigure to change any of these later without losing entities.
+The integration normalizes base URLs ending in `/`, `/v1`, or `/v1/systemone` and
+always sends requests to the correct `/v1/systemone` endpoint. When the token is
+blank, no `Authorization` header is sent.
+
+Setup tries the optional `GET /v1/models` route without running inference. A server
+without that route is still supported; the first real request validates the
+SystemOne endpoint.
+
+### TypeSafe Jev
+
+```text
+Base URL:  https://api.typesafe.ai
+API token: <your TypeSafe token>
+Model:     jev-latest
+```
+
+### Self-hosted server
+
+```text
+Base URL:  http://192.168.1.50:8000
+API token: <leave blank if authentication is disabled>
+Model:     Qwen/Qwen3.8-Flash-Next
+```
+
+The model can be any identifier accepted by the configured server. There is no
+separate self-hosted mode.
 
 ## Native AI Task entity
 
-The integration exposes `ai_task.systemone_ai_task` (the entity ID can be renamed).
-It supports structured data generation only: booleans become `noul`, selects become
-`choice`, and bounded numbers become `score`. Ten requested fields are sent as ten
-questions in one HTTP request with one shared state.
+Each configured server creates `ai_task.jev_ai_task`. The legacy `jev` domain keeps
+the integration compatible with existing installations; the entity ID can be
+renamed normally.
+
+Supported output fields are translated as follows:
+
+| Home Assistant structure | SystemOne question | Result |
+|---|---|---|
+| Boolean | `noul` | Python boolean using a `0.5` threshold |
+| Select/enum | `choice` | Exact configured option value |
+| Bounded number | `score` | Value mapped back into the requested range |
+| Free text | unsupported | Clear error before any API request |
+
+One structured task becomes one HTTP request. For example, the following three
+fields become three questions under one shared state:
 
 ```yaml
 action: ai_task.generate_data
 data:
-  entity_id: ai_task.systemone_ai_task
+  entity_id: ai_task.jev_ai_task
   task_name: office_state
   instructions: >-
-    Presence sensor: on. Computer power: 146 W. Last motion: 12 seconds ago.
+    Office presence sensor: on.
+    Desk computer power: 138 watts.
+    Ceiling lights: on.
+    Last motion: 12 seconds ago.
   structure:
     occupied:
-      description: Is the office currently occupied?
+      description: Is someone currently in the office?
       required: true
       selector:
         boolean:
+
     activity:
-      description: What is the most likely activity?
+      description: What is the most likely state of the office?
       required: true
       selector:
         select:
-          options: [empty, working, relaxing, uncertain]
-    urgency:
-      description: How urgently should Home Assistant react?
+          options:
+            - empty
+            - working
+            - relaxing
+            - uncertain
+
+    confidence_needed:
+      description: How strongly should an automation rely on this interpretation?
       required: true
       selector:
         number:
@@ -129,54 +155,54 @@ data:
 response_variable: result
 ```
 
-The values are available as `result.data.occupied`, `result.data.activity`, and
-`result.data.urgency`. Free-form text, images, attachments, tool calling, and
-arbitrary conversation generation are not supported by the AI Task entity. The
-existing typed actions and Assist router remain available.
-
-### Actions
+The result is ordinary Home Assistant structured data:
 
 ```yaml
-- action: jev.noul
-  response_variable: laundry
-  target:
-    entity_id: sensor.washing_machine_power
-  data:
-    instructions: Is the laundry finished but still sitting in the machine?
-    background: >-
-      This machine draws under 5 W when idle and over 300 W while a programme runs.
-    threshold: 0.7
-- if: "{{ laundry.is_true }}"
-  then:
-    - action: notify.mobile_app
-      data: { message: The washing is done and still in the machine. }
+result.data.occupied
+result.data.activity
+result.data.confidence_needed
 ```
 
-The same thing in the automation editor, and what a run of it looks like:
+Example value:
 
-| | |
-|---|---|
-| ![A question becomes a binary sensor you trigger on](docs/images/auto-simple.png) | ![Six questions in one request, then three branches](docs/images/auto-advanced.png) |
+```json
+{
+  "occupied": true,
+  "activity": "working",
+  "confidence_needed": 4
+}
+```
 
-The right-hand one is [example 15](examples/15_doorbell_triage_ui.yaml). Six questions
-go in one request and five are thrown away, the action targets entities instead of
-building a template, and nothing acts until the confidence clears a bar. Its trace on
-a real instance, API call included:
+SystemOne probability and confidence metadata is kept out of the requested AI Task
+schema. Request counts, latency, and token usage are available in diagnostics.
 
-![The trace of one run, 0.31 seconds end to end](docs/images/auto-trace.png)
+## Typed actions
 
-| Action | You give it | You get back |
+The original typed actions remain available for automations that want direct access
+to SystemOne response metadata.
+
+| Action | Question type | Main result |
 |---|---|---|
-| `jev.noul` | a yes/no question | `noul` 0 to 1, `is_true` against your threshold |
-| `jev.choice` | `options:`, 2 to 255 | `choice`, `probabilities`, `confidence` |
-| `jev.score` | `levels:`, 2 to 10, lowest first | `score`, `normalized`, `nearest_level`, `legend`, `probabilities`, `confidence` |
-| `jev.ask` | any mix, under your own keys | the same, under `answers` |
+| `jev.noul` | Yes/no probability | `noul`, plus thresholded `is_true` |
+| `jev.choice` | One option from 2–255 choices | `choice`, probabilities, confidence |
+| `jev.score` | Ordered scale of 2–10 levels | weighted score, legend, confidence |
+| `jev.ask` | Several mixed questions | typed answers from one request |
 
-All four take a template in `state`, or an object, or a list. They also take
-`background:` for standing facts about how to read the state, which is
-[worth more attached to the question than to the state](docs/measurements.md).
+```yaml
+action: jev.noul
+data:
+  state: >-
+    Washing-machine power: {{ states('sensor.washing_machine_power') }} W
+  instructions: Is the washing cycle finished?
+  threshold: 0.7
+response_variable: laundry
+```
 
-### Sensors
+Related questions should use `jev.ask` so they share one request and one state.
+
+## YAML decision sensors
+
+Existing YAML configuration remains supported:
 
 ```yaml
 jev:
@@ -188,115 +214,68 @@ jev:
     questions:
       - name: Laundry forgotten
         type: noul
-        instructions: Is the laundry finished but still sitting in the machine?
-        background: >-
-          This machine draws under 5 W when idle and over 300 W while a programme runs.
+        instructions: Is the laundry finished but still in the machine?
         threshold: 0.7
-      - name: Nudge urgency
+      - name: Reminder urgency
         type: score
         instructions: How urgently should someone be reminded?
-        criteria: [Not at all, When convenient, Right now]
+        criteria:
+          - Not at all
+          - When convenient
+          - Right now
 ```
 
-| Key | Required | Description |
-|---|---|---|
-| `name` | yes | Names the context and prefixes its entities |
-| `entities` | one of these two | Entities, devices, areas, floors or labels to read |
-| `state` | one of these two | Text or a template, alone or as a note beside the entities |
-| `scan_interval` | no | Seconds between evaluations, minimum 30, default 300 |
-| `trigger_entities` | no | Wake on these instead of on whatever `entities` names |
-| `include_attributes` | no | Send every attribute of the picked entities, off by default |
-| `questions` | yes | Each with `name`, `type`, `instructions`, and `criteria` for choice and score |
+Every context batches its questions into one SystemOne request. See the
+[`examples/`](examples/) directory for more automation patterns.
 
-A context is one request, so keep related questions together. It is evaluated on
-`scan_interval`, or when an entity it watches changes, debounced by 5 seconds. Adding
-`threshold:` to a noul also creates a binary sensor to trigger on.
+## Assist conversation router
 
-### Voice
+The optional conversation entity routes supported smart-home commands through the
+configured SystemOne model and Home Assistant's intent system. It supports on, off,
+toggle, brightness, and state questions. Unsupported or low-confidence requests can
+be forwarded to a configured fallback conversation agent.
 
-The integration adds a conversation agent. Settings, Voice assistants, pick your
-pipeline, set Conversation agent to **Jev**.
+Only entities exposed to Assist are included. Whole-home commands are refused by
+default except for turning everything off.
 
-![Assist answering through Jev](docs/images/assist.png)
+## Options and diagnostics
 
-It sends one request per sentence, describing only the entities you exposed to
-Assist, and runs Home Assistant's own intents with what comes back. It turns things
-on and off, toggles them, sets a light's brightness and answers what something is
-set to. Anything else, anything phrased as two commands, and anything it is not
-confident about goes to the fallback agent whole, with nothing done first.
+Integration options include:
 
-Against the built-in sentence matcher, it understands a command phrased a way
-nobody wrote a template for, and it returns a confidence the router can refuse to
-act on. Against an LLM agent, it is cheaper and it stops on its own: a command works
-out at about $0.0001 with 20 entities exposed and $0.0007 at the 150 entity cap,
-derived from the measured token cost per entity, and every one counts against the
-same daily budget as the sensors. A satellite that mishears a wake word all night
-trips that budget instead of running up a bill.
+- daily input-token budget;
+- price per million input tokens for estimated-cost sensors;
+- fallback conversation agent;
+- minimum conversation confidence;
+- whole-home command permission.
 
-Brightness comes out of a regex, not out of a question, because Jev judges and does
-not calculate. `40 percent`, `40%` and `40 procent` all work.
+Diagnostics include the endpoint URL, configured model, authentication presence,
+usage totals, and the last AI Task request statistics. API tokens and Authorization
+headers are always redacted. AI Task instructions and household state are not added
+to AI Task diagnostics.
 
-Commands naming no room and no device are refused unless you allow them, except
-turning everything off, whose worst case is a dark house.
+## Limitations
 
-## Examples
-
-| | |
-|---|---|
-| [01 laundry reminder](examples/01_laundry_reminder.yaml) | one question, one threshold, one binary sensor |
-| [02 alert triage](examples/02_alert_triage.yaml) | three questions in one call, three notification paths |
-| [03 doorbell triage](examples/03_doorbell_triage.yaml) | a choice on an intercom transcript |
-| [04 situation layer](examples/04_situation_layer.yaml) | named situations other automations trigger on |
-| [05 confidence gating](examples/05_confidence_gating.yaml) | act, ask, or stay quiet |
-| [06 composite score](examples/06_composite_score.yaml) | several scores combined with your own weights |
-| [07 Jev gates the LLM](examples/07_llm_jev_gate.yaml) | a cheap typed decision in front of an expensive call |
-| [08 cascade](examples/08_llm_cascade.yaml) | low confidence escalates to a reasoning model |
-| [09 guardrail](examples/09_llm_guardrail.yaml) | the LLM writes, Jev checks it against the source |
-| [10 extract then verify](examples/10_llm_extract_verify.yaml) | the LLM pulls fields, Jev verifies each one |
-| [11 post and parcels](examples/11_post_and_parcels.yaml) | one attention queue across several channels |
-| [12 energy window](examples/12_energy_window.yaml) | where to keep arithmetic and where to ask |
-| [13 voice commands](examples/13_voice_commands.yaml) | a command router, 12 questions per request |
-| [14 conversation agent](examples/14_conversation_agent.yaml) | watching what the agent spends, and routing text Assist never saw |
-
-The LLM examples use `ai_task.generate_data`, so they work with Google Generative AI,
-OpenAI, Anthropic or a local Ollama. The voice command router follows TypeSafe's own
-[smart home demo](https://docs.typesafe.ai/demos/smart-home) and builds its device
-options from your entity registry, so the answer is an `entity_id` you can act on.
-
-## Measurements
-
-[docs/measurements.md](docs/measurements.md) has what was measured against the live
-API: what an entity costs in tokens, why batching is nearly free, real latency from
-Europe against the published figure, and the two findings that changed this code.
-
-## Known limitations
-
-- The AI Task entity cannot generate arbitrary text, images, attachments, or tool
-  calls. A mixed structure containing any unsupported field is rejected before the
-  API is called.
-- Large or continuous numeric ranges use ten representative score levels and map
-  the weighted score back into the requested range. This is an approximation, not
-  arbitrary numeric generation.
-- Probabilities and confidence are only as calibrated as the configured model host.
-  In particular, self-hosted Qwen-compatible implementations may be uncalibrated.
-- Optional AI Task fields are conservatively answered rather than silently omitted;
-  SystemOne has no native "omit this output" primitive.
-- Answers carry no reasoning, so there is nothing to audit afterwards.
-- Confidence has no published calibration evidence. Treat 0.9 as higher than 0.6
-  until you have measured it on your own questions.
-- Slower from Europe than the published 70 to 500 ms. Fine for a doorbell, too slow
-  for a tight loop.
-- Not for safety decisions. A probability with no explanation should not hold a lock,
-  a heater or a smoke alarm.
-- The conversation agent handles on, off, toggle, brightness and state questions.
-  Media, covers, climate setpoints and anything needing words written go to the
-  fallback agent.
-- Diagnostics include the last 20 sentences the agent routed. Read the file before
-  pasting it into a public issue.
+- AI Task supports decision-oriented structured data only.
+- Free-form text, images, attachments, and AI Task tool calling are not supported.
+- A task containing any unsupported field is rejected before inference.
+- Large or continuous numeric ranges use up to ten representative score levels and
+  are mapped back into the requested range.
+- Optional AI Task fields are currently answered rather than omitted.
+- Probability and confidence calibration depends on the configured model host.
+- Do not use model decisions as the sole control for safety-critical equipment.
 
 ## Troubleshooting
 
-Turn on debug logging first. It prints every state sent, which is usually the answer:
+| Problem | Check |
+|---|---|
+| Cannot connect | Base URL, DNS, port, and server availability |
+| Authentication rejected | Token value and server authentication settings |
+| TLS failure | Certificate validity and hostname |
+| Incompatible response | Server implements the TypeSafe Jev `/v1/systemone` response format |
+| Unknown choice | Server returned a value outside the requested select options |
+| Unsupported AI Task field | Use boolean, select/enum, or bounded number selectors |
+
+Debug logging can be enabled with:
 
 ```yaml
 logger:
@@ -304,30 +283,23 @@ logger:
     custom_components.jev: debug
 ```
 
-| Symptom | Cause |
-|---|---|
-| An answer barely moves with the world | The state does not say what you assumed, or it holds a number the model is being asked to compare |
-| Answers sit near 0.5 with low confidence | The question measures more than one thing. Split it |
-| Entities unavailable, budget sensor on | The daily budget stopped evaluation |
-| Entities unavailable, budget sensor off | Look for one line saying the SystemOne server is not answering |
-| A request says the server did not answer | Check the configured base URL, TLS, and network route |
-| Voice commands all go to the fallback | Check the traces in diagnostics. Each one records the reason |
-| Voice acts on the wrong device | The names and areas in the entity registry are what the model reads |
-| An error names a limit | It names your number too. 2 to 255 options, 2 to 10 levels, 250 entities |
+Never publish logs or diagnostics without checking them for household information.
 
-## Contributing
-
-Issues and pull requests welcome.
+## Development
 
 ```bash
 pip install -r requirements-test.txt
 pytest
+ruff check custom_components tests
+ruff format --check custom_components tests
+mypy --strict --ignore-missing-imports custom_components/jev
 ```
 
-177 tests run the integration inside a real Home Assistant with the API client
-replaced, so the suite spends nothing. `quality_scale.yaml` tracks this against Home
-Assistant's quality scale, and `mypy --strict` runs in CI.
+The project is validated with pytest, Ruff, strict mypy, hassfest, and the HACS
+validation action.
 
-## Changelog
+## Project links
 
-See the [release history](https://github.com/AtHeartEngineer/HA-SystemOne/releases).
+- [Repository](https://github.com/AtHeartEngineer/HA-SystemOne)
+- [Releases](https://github.com/AtHeartEngineer/HA-SystemOne/releases)
+- [Issues](https://github.com/AtHeartEngineer/HA-SystemOne/issues)
